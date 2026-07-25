@@ -7,3 +7,10 @@ export type Alert = {
   failure_count: number;
   recommended_action: string;
 };
+
+export type IAMUser = {
+  username: string;
+  created_date: string;
+  mfa_enabled: boolean;
+  arn: string;
+};

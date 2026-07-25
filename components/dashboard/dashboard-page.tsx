@@ -5,19 +5,15 @@ import { useState, useTransition } from "react";
 import { AlertTable } from "@/components/dashboard/alert-table";
 import { RunAnalysisButton } from "@/components/dashboard/run-analysis-button";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
-import type { Alert } from "@/components/dashboard/types";
+import { UserCards } from "@/components/dashboard/user-cards";
+import type { Alert, IAMUser } from "@/components/dashboard/types";
 import { Card, CardContent } from "@/components/ui/card";
 
 function formatScanTime(value: string | null) {
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
+  if (Number.isNaN(parsed.getTime())) return value;
 
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
@@ -27,8 +23,10 @@ function formatScanTime(value: string | null) {
 
 export function DashboardPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [users, setUsers] = useState<IAMUser[]>([]);
   const [lastScanTime, setLastScanTime] = useState<string | null>(null);
   const [hasScanned, setHasScanned] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -43,23 +41,19 @@ export function DashboardPage() {
       try {
         const response = await fetch("/api/aws-logs", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         });
 
         if (!response.ok) {
           const payload = (await response.json().catch(() => null)) as
             | { error?: string }
             | null;
-
           throw new Error(
             payload?.error ?? `Analysis failed with status ${response.status}`,
           );
         }
 
         const data = (await response.json()) as Alert[];
-
         setAlerts(Array.isArray(data) ? data : []);
         setLastScanTime(new Date().toISOString());
         setHasScanned(true);
@@ -74,6 +68,14 @@ export function DashboardPage() {
         );
       }
     });
+
+    // Also fetch IAM users
+    setUsersLoading(true);
+    fetch("/api/aws-logs/users")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setUsers(Array.isArray(data) ? data : []))
+      .catch(() => setUsers([]))
+      .finally(() => setUsersLoading(false));
   };
 
   return (
@@ -88,8 +90,8 @@ export function DashboardPage() {
               Real-time threat visibility for cloud identities and access paths.
             </h1>
             <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
-              Launch analysis on demand, track critical incidents, and inspect
-              suspicious activity with an interface tuned for fast operational response.
+              Launch analysis on demand, track critical incidents, inspect
+              IAM user security posture, and expand individual findings.
             </p>
           </div>
           <RunAnalysisButton isLoading={isPending} onClick={runAnalysis} />
@@ -100,6 +102,11 @@ export function DashboardPage() {
           criticalAlerts={criticalAlerts}
           lastScanTime={formatScanTime(lastScanTime)}
         />
+
+        {/* User cards section */}
+        <div className="mt-6">
+          <UserCards users={users} isLoading={usersLoading} />
+        </div>
 
         {error ? (
           <Card className="mt-6 border-red-500/30 bg-red-500/10">
