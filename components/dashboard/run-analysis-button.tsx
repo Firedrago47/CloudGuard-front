@@ -15,7 +15,7 @@ export function RunAnalysisButton({
     <Button
       onClick={onClick}
       disabled={isLoading}
-      className="min-w-40 px-5 py-3 text-sm font-semibold tracking-wider"
+      className="shrink-0 px-5 py-2.5 text-sm font-semibold tracking-wider"
     >
       {isLoading ? (
         <>
