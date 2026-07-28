@@ -62,3 +62,35 @@ export async function POST() {
     );
   }
 }
+
+export async function GET() {
+  try {
+    const response = await fetch(`${PYTHON_SERVER_URL}/history`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Python server returned ${response.status}` },
+        { status: response.status },
+      );
+    }
+
+    const history = normalizeAlerts(await response.json());
+    return NextResponse.json(history, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch history from the Python server.",
+      },
+      { status: 500 },
+    );
+  }
+}
